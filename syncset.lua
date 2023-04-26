@@ -122,6 +122,17 @@ lovr.headset.vibrate = function(device, strength, duration, frequency)
 end
 
 function update(dt)
+  -- reset the button changes that are only supposed to be active for a single frame
+  for hand, buttons in pairs(headsetData.wasPressed) do
+    for button, state in pairs(buttons) do
+      headsetData.wasPressed[hand][button] = false
+    end
+  end
+  for hand, buttons in pairs(headsetData.wasReleased) do
+    for button, state in pairs(buttons) do
+      headsetData.wasReleased[hand][button] = false
+    end
+  end
   eventLoop(host)
   if verbose then
     log(serpent.block(headsetData))
