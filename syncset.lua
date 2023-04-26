@@ -6,6 +6,7 @@ local headset_ip = '192.168.0.42'
 local port = 8091
 local wrap_update = true  -- to use, place the require'syncset' at the end of main!
 local verbose = false     -- prints out all the received data!
+local offset = Vec3(0, 0.2, -0.7)
 
 local logbook = {}
 
@@ -76,10 +77,17 @@ lovr.headset.isTracked = function(device)
   return headsetData.tracked[device] or false
 end
 lovr.headset.getPose = function(device)
-  return unpack(headsetData.pose[device or 'head'])
+  local x, y, z, angle, ax, ay, az = unpack(headsetData.pose[device or 'head'])
+  x = x + offset.x
+  y = y + offset.y
+  z = z + offset.z
+  return x, y, z, angle, ax, ay, az
 end
 lovr.headset.getPosition = function(device)
   local x, y, z = unpack(headsetData.pose[device or 'head'])
+  x = x + offset.x
+  y = y + offset.y
+  z = z + offset.z
   return x, y, z
 end
 lovr.headset.getVelocity = function(device)
