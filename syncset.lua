@@ -2,11 +2,11 @@
 local enet = require 'lua-enet'
 local serpent = require 'serpent'
 
-local headset_ip = '192.168.0.42'
+local headset_ip = '192.168.0.22'
 local port = 8091
 local wrap_update = true  -- to use, place the require'syncset' at the end of main!
 local verbose = false     -- prints out all the received data!
-local offset = Vec3(0, 0.2, -0.7)
+local offset = Vec3(0, 0.2, -0.7) -- applied on top of tracked positions
 
 local logbook = {}
 
@@ -24,6 +24,20 @@ end
 --[[ disable logging here
 local function log() end
 --]]
+
+local device_map = {
+  [''] = 'head',
+  ['head'] = 'head',
+  ['left'] = 'hand/left',
+  ['hand/left'] = 'hand/left',
+  ['left/point'] = 'hand/left/point',
+  ['hand/left/point'] = 'hand/left/point',
+  ['right'] = 'hand/right',
+  ['hand/right'] = 'hand/right',
+  ['right/point'] = 'hand/right/point',
+  ['hand/right/point'] = 'hand/right/point',
+}
+
 
 local host = enet.host_create()
 local url = headset_ip .. ':' .. port
@@ -74,50 +88,70 @@ lovr.headset.getHands = function()
   return headsetData.hands
 end
 lovr.headset.isTracked = function(device)
-  return headsetData.tracked[device] or false
+  local dev = device_map[device or '']
+  return headsetData.tracked[dev] or false
 end
 lovr.headset.getPose = function(device)
-  local x, y, z, angle, ax, ay, az = unpack(headsetData.pose[device or 'head'])
-  x = x + offset.x
-  y = y + offset.y
-  z = z + offset.z
-  return x, y, z, angle, ax, ay, az
+  local dev = device_map[device or '']
+  if headsetData.pose[dev] then
+    local x, y, z, angle, ax, ay, az = unpack(headsetData.pose[dev])
+    x = x + offset.x
+    y = y + offset.y
+    z = z + offset.z
+    return x, y, z, angle, ax, ay, az
+  else
+    return 0,0,0,0,0,0,0
+  end
 end
 lovr.headset.getPosition = function(device)
-  local x, y, z = unpack(headsetData.pose[device or 'head'])
-  x = x + offset.x
-  y = y + offset.y
-  z = z + offset.z
-  return x, y, z
+  local dev = device_map[device or '']
+  if headsetData.pose[dev] then
+    local x, y, z = unpack(headsetData.pose[dev])
+    x = x + offset.x
+    y = y + offset.y
+    z = z + offset.z
+    return x, y, z
+  else
+    return 0,0,0
+  end
 end
 lovr.headset.getVelocity = function(device)
-  return unpack(headsetData.velocity[device or 'head'])
+  local dev = device_map[device or '']
+  return unpack(headsetData.velocity[dev] or {0,0,0})
 end
 lovr.headset.getAngularVelocity = function(device)
-  return unpack(headsetData.angularVelocity[device or 'head'])
+  local dev = device_map[device or '']
+  return unpack(headsetData.angularVelocity[dev] or {0,0,0})
 end
-lovr.headset.getSkeleton = function(hand)
-  return headsetData.skeleton[hand]
+lovr.headset.getSkeleton = function(device)
+  local dev = device_map[device or '']
+  return headsetData.skeleton[dev]
 end
-lovr.headset.isTouched = function(hand, button)
-  return headsetData.isTouched[hand][button] or false
+lovr.headset.isTouched = function(device, button)
+  local dev = device_map[device or '']
+  return headsetData.isTouched[dev] and (headsetData.isTouched[dev][button] or false)
 end
-lovr.headset.isDown = function(hand, button)
-  return headsetData.isDown[hand][button] or false
+lovr.headset.isDown = function(device, button)
+  local dev = device_map[device or '']
+  return headsetData.isDown[dev] and (headsetData.isDown[dev][button] or false)
 end
-lovr.headset.wasPressed = function(hand, button)
-  return headsetData.wasPressed[hand][button] or false
+lovr.headset.wasPressed = function(device, button)
+  local dev = device_map[device or '']
+  return headsetData.wasPressed[dev] and (headsetData.wasPressed[dev][button] or false)
 end
-lovr.headset.wasReleased = function(hand, button)
-  return headsetData.wasReleased[hand][button] or false
+lovr.headset.wasReleased = function(device, button)
+  local dev = device_map[device or '']
+  return headsetData.wasReleased[dev] and (headsetData.wasReleased[dev][button] or false)
 end
-lovr.headset.getAxis = function(hand, axis)
-  if headsetData.axes[hand] then
-    return unpack(headsetData.axes[hand][axis])
+lovr.headset.getAxis = function(device, axis)
+  local dev = device_map[device or '']
+  if headsetData.axes[dev] then
+    return unpack(headsetData.axes[dev] and headsetData.axes[dev][axis] or {})
   end
 end
 lovr.headset.vibrate = function(device, strength, duration, frequency)
-  local command = serpent.dump({'vibrate', device, strength, duration, frequency})
+  local dev = device_map[device or '']
+  local command = serpent.dump({'vibrate', dev, strength, duration, frequency})
   server:send(command)
 end
 
