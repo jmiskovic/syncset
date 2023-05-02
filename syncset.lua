@@ -115,6 +115,15 @@ lovr.headset.getPosition = function(device)
     return 0,0,0
   end
 end
+lovr.headset.getOrientation = function(device)
+  local dev = device_map[device or '']
+  if headsetData.pose[dev] then
+    local angle, ax, ay, az = select(7, unpack(headsetData.pose[dev]))
+    return angle, ax, ay, az
+  else
+    return 0,0,0,0
+  end
+end
 lovr.headset.getVelocity = function(device)
   local dev = device_map[device or '']
   return unpack(headsetData.velocity[dev] or {0,0,0})
